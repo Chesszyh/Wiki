@@ -1,0 +1,42 @@
+{
+  "Extension Host": {
+    "zh": "扩展主机",
+    "file": "/home/chesszyh/Downloads/tests/vscode_deepwiki/10-source-control-management.md"
+  },
+  "VS Code": {
+    "zh": "Visual Studio Code",
+    "file": "/home/chesszyh/Downloads/tests/vscode_deepwiki/10-source-control-management.md"
+  },
+  "Electron": {
+    "zh": "Electron 运行时",
+    "file": "/home/chesszyh/Downloads/tests/vscode_deepwiki/2-build-system-and-development/2.1-package-structure-and-dependencies.md"
+  },
+  "TypeScript": {
+    "zh": "TypeScript 语言",
+    "file": "/home/chesszyh/Downloads/tests/vscode_deepwiki/2-build-system-and-development/2.1-package-structure-and-dependencies.md"
+  },
+  "Workbench": {
+    "zh": "工作台",
+    "file": "/home/chesszyh/Downloads/tests/vscode_deepwiki/3-application-lifecycle-and-bootstrap.md"
+  },
+  "CodeApplication": {
+    "zh": "CodeApplication 应用",
+    "file": "/home/chesszyh/Downloads/tests/vscode_deepwiki/3-application-lifecycle-and-bootstrap.md"
+  },
+  "InstantiationService": {
+    "zh": "实例化服务",
+    "file": "/home/chesszyh/Downloads/tests/vscode_deepwiki/3-application-lifecycle-and-bootstrap/3.5-service-initialization-and-dependency-injection.md"
+  },
+  "Monaco Editor": {
+    "zh": "Monaco 编辑器",
+    "file": "/home/chesszyh/Downloads/tests/vscode_deepwiki/4-monaco-editor.md"
+  },
+  "ITextModel": {
+    "zh": "ITextModel 接口",
+    "file": "/home/chesszyh/Downloads/tests/vscode_deepwiki/4-monaco-editor/4.1-monaco-editor-api-and-standalone-usage.md"
+  },
+  "xterm.js": {
+    "zh": "xterm.js 终端模拟器",
+    "file": "/home/chesszyh/Downloads/tests/vscode_deepwiki/7-integrated-terminal.md"
+  }
+}
