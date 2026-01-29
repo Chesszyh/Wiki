@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="DeepWiki documentation export for celery/celery">
+  <title>celery/celery - DeepWiki Export</title>
+
+  <!-- Docsify Theme -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4.13.1/lib/themes/vue.css">
+
+  <!-- Dark Theme Override -->
+  <style>
+    :root {
+      --base-background-color: #0d1117;
+      --sidebar-background: #161b22;
+      --sidebar-nav-link-color: #8b949e;
+      --sidebar-nav-link-color--active: #58a6ff;
+      --cover-background-color: #0d1117;
+      --text-color-base: #e6edf3;
+      --theme-color: #42b983;
+    }
+
+    body {
+      background-color: var(--base-background-color);
+      color: var(--text-color-base);
+    }
+
+    .sidebar {
+      background-color: var(--sidebar-background);
+      border-right: 1px solid #30363d;
+    }
+
+    .sidebar-nav a {
+      color: var(--sidebar-nav-link-color);
+    }
+
+    .sidebar-nav a.active,
+    .sidebar-nav a:hover {
+      color: var(--sidebar-nav-link-color--active);
+    }
+
+    .markdown-section {
+      background-color: var(--base-background-color);
+      color: var(--text-color-base);
+    }
+
+    .markdown-section h1,
+    .markdown-section h2,
+    .markdown-section h3,
+    .markdown-section h4,
+    .markdown-section h5,
+    .markdown-section h6 {
+      color: var(--text-color-base);
+    }
+
+    .markdown-section a {
+      color: #58a6ff;
+    }
+
+    .markdown-section code {
+      background-color: #21262d;
+      color: #e6edf3;
+      border-radius: 4px;
+      padding: 2px 6px;
+    }
+
+    .markdown-section pre {
+      background-color: #161b22 !important;
+      border-radius: 6px;
+      padding: 16px;
+    }
+
+    .markdown-section pre > code {
+      background-color: transparent;
+      padding: 0;
+    }
+
+    .markdown-section blockquote {
+      border-left: 4px solid #42b983;
+      background-color: #21262d;
+      padding: 12px 16px;
+      margin: 16px 0;
+    }
+
+    .markdown-section table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    .markdown-section table th,
+    .markdown-section table td {
+      border: 1px solid #30363d;
+      padding: 8px 12px;
+    }
+
+    .markdown-section table th {
+      background-color: #21262d;
+    }
+
+    .markdown-section table tr:nth-child(even) {
+      background-color: #161b22;
+    }
+
+    /* Mermaid 图表样式 */
+    .mermaid {
+      background-color: #161b22;
+      padding: 16px;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    /* Search 插件样式 */
+    .search {
+      background-color: var(--sidebar-background);
+    }
+
+    .search input {
+      background-color: #21262d;
+      color: var(--text-color-base);
+      border: 1px solid #30363d;
+      border-radius: 4px;
+    }
+
+    .search .results-panel {
+      background-color: #21262d;
+      border: 1px solid #30363d;
+    }
+
+    /* 复制代码按钮 */
+    .docsify-copy-code-button {
+      background-color: #21262d !important;
+      color: #8b949e !important;
+      border: 1px solid #30363d !important;
+    }
+
+    .docsify-copy-code-button:hover {
+      color: var(--text-color-base) !important;
+    }
+
+    /* 滚动条 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--base-background-color);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    /* 响应式调整 */
+    @media screen and (max-width: 768px) {
+      .sidebar {
+        padding-top: 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">正在加载...</div>
+
+  <script>
+    window.$docsify = {
+      name: 'celery/celery - DeepWiki Export',
+      repo: 'https://github.com/celery/celery',
+      loadSidebar: true,
+      subMaxLevel: 3,
+      auto2top: true,
+      relativePath: true,
+      notFoundPage: true,
+
+      // 搜索配置
+      
+
+      // Mermaid 配置
+      mermaid: {
+        startOnLoad: true,
+        theme: 'dark'
+      },
+
+      // 页面切换后滚动到顶部
+      routerMode: 'hash',
+
+      // 格式化时间
+      formatUpdated: '{YYYY}/{MM}/{DD} {HH}:{mm}',
+
+      // 插件配置
+      plugins: [
+        function(hook, vm) {
+          hook.ready(function() {
+            console.log('DeepWiki Export loaded successfully');
+          });
+        }
+      ]
+    };
+  </script>
+
+  <!-- Docsify -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4.13.1/lib/docsify.min.js"></script>
+
+  <!-- 代码高亮 -->
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-go.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-rust.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-java.min.js"></script>
+
+  <!-- Mermaid -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify-mermaid@2.0.0/dist/docsify-mermaid.js"></script>
+
+  <!-- 复制代码 -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code@2"></script>
+
+  
+</body>
+</html>
