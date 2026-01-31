@@ -1,0 +1,5 @@
+nav:
+  - 2.1-server-architecture-and-lifecycle.md
+  - 2.2-client-connection-management.md
+  - 2.3-command-processing-pipeline.md
+  - 2.4-configuration-management.md

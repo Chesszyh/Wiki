@@ -1,0 +1,20 @@
+nav:
+  - 1-overview.md
+  - 2-getting-started-and-deployment
+  - 2-getting-started-and-deployment.md
+  - 3-system-architecture
+  - 3-system-architecture.md
+  - 4-frontend-application
+  - 4-frontend-application.md
+  - 5-llm-integration-system
+  - 5-llm-integration-system.md
+  - 6-document-processing-pipeline
+  - 6-document-processing-pipeline.md
+  - 7-data-source-integration
+  - 7-data-source-integration.md
+  - 8-backend-api-system
+  - 8-backend-api-system.md
+  - 9-agent-and-workflow-system
+  - 9-agent-and-workflow-system.md
+  - 10-retrieval-and-rag-system
+  - 10-retrieval-and-rag-system.md

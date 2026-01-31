@@ -1,0 +1,19 @@
+nav:
+  - 1-redis-overview.md
+  - 2-redis-core
+  - 2-redis-core.md
+  - 3-data-storage-and-management
+  - 3-data-storage-and-management.md
+  - 4-memory-management
+  - 4-memory-management.md
+  - 5-scripting-and-extensions
+  - 5-scripting-and-extensions.md
+  - 6-high-availability-and-distribution
+  - 6-high-availability-and-distribution.md
+  - 7-persistence-and-replication.md
+  - 8-security
+  - 8-security.md
+  - 9-client-tools
+  - 9-client-tools.md
+  - 10-development-and-testing
+  - 10-development-and-testing.md

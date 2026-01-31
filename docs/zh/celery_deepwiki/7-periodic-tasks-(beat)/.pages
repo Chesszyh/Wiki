@@ -1,0 +1,5 @@
+nav:
+  - 7.1-beat-scheduler-architecture.md
+  - 7.2-schedule-types.md
+  - 7.3-time-and-timezone-handling.md
+  - 7.4-persistent-storage.md

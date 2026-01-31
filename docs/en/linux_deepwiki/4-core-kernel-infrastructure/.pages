@@ -1,0 +1,4 @@
+nav:
+  - 4.1-process-scheduling-and-sched_ext.md
+  - 4.2-tracing-and-observability.md
+  - 4.3-build-system-and-kbuild.md

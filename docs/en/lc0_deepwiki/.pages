@@ -1,0 +1,18 @@
+nav:
+  - 1-lc0-overview.md
+  - 2-building-and-installation
+  - 2-building-and-installation.md
+  - 3-core-engine-architecture
+  - 3-core-engine-architecture.md
+  - 4-chess-representation
+  - 4-chess-representation.md
+  - 5-search-algorithm
+  - 5-search-algorithm.md
+  - 6-neural-network-system
+  - 6-neural-network-system.md
+  - 7-self-play-system
+  - 7-self-play-system.md
+  - 8-utilities-and-infrastructure
+  - 8-utilities-and-infrastructure.md
+  - 9-continuous-integration-and-deployment
+  - 9-continuous-integration-and-deployment.md

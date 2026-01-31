@@ -1,0 +1,5 @@
+nav:
+  - 2.1-build-system-architecture.md
+  - 2.2-linux-and-macos-build-process.md
+  - 2.3-windows-build-process.md
+  - 2.4-version-management.md

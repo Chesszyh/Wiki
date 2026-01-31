@@ -1,0 +1,4 @@
+nav:
+  - 4.1-search-algorithm-and-iterative-deepening.md
+  - 4.2-thread-management-and-parallel-search.md
+  - 4.3-move-ordering-and-move-picker.md

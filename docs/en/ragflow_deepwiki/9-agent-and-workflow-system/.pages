@@ -1,0 +1,8 @@
+nav:
+  - 9.1-canvas-engine-and-dsl.md
+  - 9.2-component-system-architecture.md
+  - 9.3-built-in-components.md
+  - 9.4-workflow-execution-and-streaming.md
+  - 9.5-state-and-variable-management.md
+  - 9.6-agent-tools-and-react-loop.md
+  - 9.7-canvas-api-and-management.md

@@ -1,0 +1,6 @@
+nav:
+  - 5.1-model-factory-pattern-and-registration.md
+  - 5.2-provider-implementations.md
+  - 5.3-error-handling-and-retry-logic.md
+  - 5.4-tenant-configuration-and-usage-tracking.md
+  - 5.5-tool-calling-and-function-use.md

@@ -1,0 +1,5 @@
+nav:
+  - 4.1-bitboards-and-move-generation.md
+  - 4.2-position-encoding-and-history.md
+  - 4.3-syzygy-tablebase-integration.md
+  - 4.4-pgn-and-game-import.md

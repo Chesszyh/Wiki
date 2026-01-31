@@ -1,0 +1,6 @@
+nav:
+  - 8.1-api-architecture-and-sdk.md
+  - 8.2-authentication-and-authorization.md
+  - 8.3-dataset-and-knowledge-base-apis.md
+  - 8.4-document-and-file-management-apis.md
+  - 8.5-chat-and-conversation-apis.md

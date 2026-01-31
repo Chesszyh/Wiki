@@ -1,0 +1,4 @@
+nav:
+  - 3.1-position-and-state-management.md
+  - 3.2-bitboards-and-low-level-operations.md
+  - 3.3-move-generation.md

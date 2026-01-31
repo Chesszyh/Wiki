@@ -1,0 +1,3 @@
+nav:
+  - 2.1-docker-compose-deployment.md
+  - 2.4-build-system-and-cicd.md

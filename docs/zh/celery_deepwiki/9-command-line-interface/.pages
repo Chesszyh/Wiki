@@ -1,0 +1,5 @@
+nav:
+  - 9.1-cli-architecture.md
+  - 9.2-worker-and-beat-commands.md
+  - 9.3-management-commands.md
+  - 9.4-multi-worker-management.md

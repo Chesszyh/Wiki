@@ -1,0 +1,12 @@
+nav:
+  - 1-linux-kernel-overview.md
+  - 2-rust-for-linux
+  - 2-rust-for-linux.md
+  - 3-virtualization-(kvm)
+  - 3-virtualization-(kvm).md
+  - 4-core-kernel-infrastructure
+  - 4-core-kernel-infrastructure.md
+  - 5-storage-and-io
+  - 5-storage-and-io.md
+  - 6-graphics-and-display
+  - 6-graphics-and-display.md

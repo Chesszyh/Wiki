@@ -1,0 +1,4 @@
+nav:
+  - 11.1-package-structure.md
+  - 11.2-dependencies-and-extras.md
+  - 11.3-version-management-and-release.md

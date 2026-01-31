@@ -1,0 +1,4 @@
+nav:
+  - 7.1-connector-architecture.md
+  - 7.2-synchronization-and-scheduling.md
+  - 7.3-supported-data-sources.md

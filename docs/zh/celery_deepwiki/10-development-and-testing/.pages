@@ -1,0 +1,5 @@
+nav:
+  - 10.1-testing-infrastructure.md
+  - 10.2-test-matrix-and-environments.md
+  - 10.3-integration-and-smoke-tests.md
+  - 10.4-code-quality-and-documentation.md

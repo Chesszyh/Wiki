@@ -1,0 +1,7 @@
+nav:
+  - 6.1-network-interface-and-backend-architecture.md
+  - 6.2-weights-loading-and-management.md
+  - 6.3-cuda-and-cudnn-backend.md
+  - 6.4-onnx-integration.md
+  - 6.5-xla-and-hlo-support.md
+  - 6.6-memory-caching-and-performance.md

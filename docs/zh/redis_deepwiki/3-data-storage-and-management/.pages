@@ -1,0 +1,7 @@
+nav:
+  - 3.1-core-data-types-implementation.md
+  - 3.2-streams-and-blocking-operations.md
+  - 3.3-hyperloglog.md
+  - 3.4-memory-efficient-data-structures.md
+  - 3.5-dictionary-and-key-value-store.md
+  - 3.6-dynamic-string-library.md

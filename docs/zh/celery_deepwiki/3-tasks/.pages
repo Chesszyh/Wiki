@@ -1,0 +1,6 @@
+nav:
+  - 3.1-task-definition-and-invocation.md
+  - 3.2-task-lifecycle-and-states.md
+  - 3.3-error-handling-and-retry.md
+  - 3.4-time-limits-and-rate-limits.md
+  - 3.5-task-options-and-customization.md

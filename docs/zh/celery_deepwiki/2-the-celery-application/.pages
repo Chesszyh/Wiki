@@ -1,0 +1,5 @@
+nav:
+  - 2.1-application-initialization-and-configuration.md
+  - 2.2-task-registration.md
+  - 2.3-message-brokers-and-routing.md
+  - 2.4-amqp-layer-and-message-protocol.md

@@ -1,0 +1,23 @@
+nav:
+  - 1-celery-overview
+  - 1-celery-overview.md
+  - 2-the-celery-application
+  - 2-the-celery-application.md
+  - 3-tasks
+  - 3-tasks.md
+  - 4-canvas-workflows
+  - 4-canvas-workflows.md
+  - 5-workers
+  - 5-workers.md
+  - 6-result-backends
+  - 6-result-backends.md
+  - 7-periodic-tasks-(beat)
+  - 7-periodic-tasks-(beat).md
+  - 8-monitoring-and-control
+  - 8-monitoring-and-control.md
+  - 9-command-line-interface
+  - 9-command-line-interface.md
+  - 10-development-and-testing
+  - 10-development-and-testing.md
+  - 11-packaging-and-distribution
+  - 11-packaging-and-distribution.md

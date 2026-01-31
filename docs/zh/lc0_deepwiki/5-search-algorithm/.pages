@@ -1,0 +1,4 @@
+nav:
+  - 5.1-mcts-implementation.md
+  - 5.2-search-parameters-and-stopping-conditions.md
+  - 5.3-search-tree-caching.md
