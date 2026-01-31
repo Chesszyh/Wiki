@@ -1,6 +1,6 @@
 site_name: DeepWiki
-site_url: https://example.com/
-repo_url: https://github.com/username/repo/
+site_url: https://wiki.neurosama.uk
+repo_url: https://github.com/Chesszyh/Wiki
 edit_uri: edit/main/docs/
 
 theme:
