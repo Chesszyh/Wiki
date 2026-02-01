@@ -1,468 +1,370 @@
-# 音频处理
+# 音频处理 (Audio Processing)
 
 相关源文件
 
--   [backend/open\_webui/env.py](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/env.py)
+-   [backend/open\_webui/config.py](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/config.py)
+-   [backend/open\_webui/main.py](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/main.py)
 -   [backend/open\_webui/routers/audio.py](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py)
--   [backend/open\_webui/routers/auths.py](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/auths.py)
--   [backend/open\_webui/routers/ollama.py](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/ollama.py)
--   [backend/open\_webui/routers/openai.py](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/openai.py)
--   [backend/open\_webui/utils/auth.py](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/auth.py)
--   [backend/open\_webui/utils/embeddings.py](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/embeddings.py)
--   [backend/open\_webui/utils/misc.py](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/misc.py)
--   [backend/open\_webui/utils/oauth.py](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/oauth.py)
--   [backend/open\_webui/utils/response.py](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/response.py)
+-   [backend/open\_webui/utils/middleware.py](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/middleware.py)
 
-## 目的和范围
+本文档记录了 WebSocket 基础设施，该设施支持 Open WebUI 前端和后端之间的实时双向通信。该系统支持实时状态更新、流式响应、文件传输和协作功能。
 
-本文档涵盖了 Open WebUI 中的音频处理子系统，该子系统通过文本转语音 (TTS) 和语音转文本 (STT) 功能，实现了与 AI 模型的语音交互。这些系统支持多个后端引擎和提供商，允许从云服务到完全本地实现的各种灵活部署方案。
+有关使用这些 WebSocket 事件的聊天处理流水线信息，请参阅 [后端处理流水线](/open-webui/open-webui/6-backend-processing-pipeline)。有关聊天界面中的前端事件处理，请参阅 [WebSocket 事件处理](/open-webui/open-webui/4.5-websocket-event-handling)。
 
-有关 LLM 集成和模型管理的信息，请参阅 [LLM 提供商集成](/open-webui/open-webui/13-llm-provider-integration)。
+**来源：** [backend/open\_webui/main.py63-69](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/main.py#L63-L69) [backend/open\_webui/env.py470](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/env.py#L470-L470)
 
-**来源：** [backend/open\_webui/routers/audio.py1-900](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L1-L900)
+## 系统概览
 
----
+Open WebUI 的 WebSocket 架构提供了一个实时事件系统，作为基于 HTTP 的 API 的补充。该系统的设计目标包括：
 
-## 系统架构
+-   **可选性**：可以通过 `ENABLE_WEBSOCKET_SUPPORT` 环境变量禁用。
+-   **分布式**：使用 Redis 支持多实例部署。
+-   **事件驱动**：支持双向事件通信 (emit/call)。
+-   **基于房间 (Room-based)**：能够向特定会话或用户发送定向消息。
 
-```mermaid
-flowchart TD
-    AudioRouter["audio.py APIRouter"]
-    ConfigEndpoints["/config 端点"]
-    TTSEndpoint["/speech POST"]
-    STTEndpoint["/transcriptions POST"]
-    VoicesEndpoint["/voices GET"]
-    OpenAITTS["OpenAI TTS TTS_OPENAI_API_BASE_URL"]
-    ElevenLabs["ElevenLabs ELEVENLABS_API_BASE_URL"]
-    AzureTTS["Azure Speech TTS_AZURE_SPEECH_REGION"]
-    TransformersTTS["Transformers Pipeline speecht5_tts"]
-    WhisperLocal["Faster Whisper faster_whisper_model"]
-    OpenAISTT["OpenAI Whisper API STT_OPENAI_API_BASE_URL"]
-    AzureSTT["Azure Speech Services AUDIO_STT_AZURE_API_KEY"]
-    Deepgram["Deepgram DEEPGRAM_API_KEY"]
-    MistralSTT["Mistral Audio AUDIO_STT_MISTRAL_API_KEY"]
-    FormatConversion["音频格式转换 is_audio_conversion_required convert_audio_to_mp3"]
-    SilenceDetection["静音检测与分块 split_on_silence"]
-    SpeechCache["语音缓存 CACHE_DIR/audio/speech"]
-    UploadDir["上传目录 UPLOAD_DIR"]
+WebSocket 系统使用 Socket.IO 与 FastAPI 集成，并作为子应用与主 HTTP 路由并行挂载。
 
-    AudioRouter --> ConfigEndpoints
-    AudioRouter --> TTSEndpoint
-    AudioRouter --> STTEndpoint
-    AudioRouter --> VoicesEndpoint
-    TTSEndpoint --> OpenAITTS
-    TTSEndpoint --> ElevenLabs
-    TTSEndpoint --> AzureTTS
-    TTSEndpoint --> TransformersTTS
-    TTSEndpoint --> SpeechCache
-    STTEndpoint --> FormatConversion
-    FormatConversion --> WhisperLocal
-    FormatConversion --> OpenAISTT
-    FormatConversion --> AzureSTT
-    FormatConversion --> Deepgram
-    FormatConversion --> MistralSTT
-    STTEndpoint --> SilenceDetection
-    STTEndpoint --> UploadDir
-```
-**来源：** [backend/open\_webui/routers/audio.py1-900](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L1-L900) [backend/open\_webui/config.py1-100](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/config.py#L1-L100)
+**来源：** [backend/open\_webui/main.py63-69](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/main.py#L63-L69) [backend/open\_webui/config.py470](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/config.py#L470-L470)
 
----
-
-## 配置系统
-
-音频配置通过持久化的应用程序配置进行管理，并为 TTS 和 STT 设置提供了专用表单。
-
-### 配置模型
-
-| 模型 | 用途 | 关键字段 |
-| --- | --- | --- |
-| `TTSConfigForm` | TTS 引擎设置 | `ENGINE`, `MODEL`, `VOICE`, `OPENAI_API_BASE_URL`, `API_KEY`, `SPLIT_ON`, `AZURE_SPEECH_REGION` |
-| `STTConfigForm` | STT 引擎设置 | `ENGINE`, `MODEL`, `WHISPER_MODEL`, `DEEPGRAM_API_KEY`, `AZURE_API_KEY`, `MISTRAL_API_KEY`, `SUPPORTED_CONTENT_TYPES` |
-| `AudioConfigUpdateForm` | 组合更新表单 | `tts: TTSConfigForm`, `stt: STTConfigForm` |
-
-**来源：** [backend/open\_webui/routers/audio.py155-189](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L155-L189)
-
-### 配置端点
+## WebSocket 应用挂载
 
 ```mermaid
 flowchart TD
-    Admin["管理员用户"]
-    GetConfig["/api/audio/config GET"]
-    UpdateConfig["/api/audio/config/update POST"]
-    ConfigData["返回 TTS 和 STT 配置对象"]
-    UpdateState["更新 app.state.config 的 TTS_* 和 STT_* 字段"]
-    InitWhisper["如果 STT_ENGINE 为空，则初始化 faster_whisper_model"]
-    Response["包含所有配置参数的 JSON 响应"]
+    MainApp["FastAPI 应用 (main.py)"]
+    SocketApp["Socket.IO 应用 (socket_app)"]
+    Lifespan["@asynccontextmanager lifespan()"]
+    RedisSetup["Redis 连接设置"]
+    TaskListener["redis_task_command_listener 后台任务"]
+    PeriodicCleanup["periodic_usage_pool_cleanup 后台任务"]
+    AppState["app.state.redis (Redis 客户端)"]
+    TaskRef["app.state.redis_task_command_listener (任务引用)"]
 
-    Admin --> GetConfig
-    Admin --> UpdateConfig
-    GetConfig --> ConfigData
-    UpdateConfig --> UpdateState
-    UpdateConfig --> InitWhisper
-    ConfigData --> Response
-    UpdateState --> Response
+    MainApp --> SocketApp
+    Lifespan --> RedisSetup
+    Lifespan --> TaskListener
+    Lifespan --> PeriodicCleanup
+    MainApp --> Lifespan
+    RedisSetup --> AppState
+    TaskListener --> TaskRef
 ```
-`GET /api/audio/config` 端点用于获取当前配置：
+Socket.IO 应用作为 `socket_app` 从 `open_webui.socket.main` 导入，并挂载到主 FastAPI 应用中。在应用的生命周期 (lifespan) 期间，会初始化 Redis 连接和后台任务。
 
+**来源：** [backend/open\_webui/main.py63-69](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/main.py#L63-L69) [backend/open\_webui/main.py586-604](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/main.py#L586-L604) [backend/open\_webui/main.py629-631](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/main.py#L629-L631)
+
+## 事件系统架构
+
+WebSocket 系统为实时通信提供了两个主要的基元：
+
+### 事件发射器 (Server → Client)
+
+**事件发射器 (Event Emitter)** 从后端向已连接的客户端发送异步通知，而不期望得到响应。用于状态更新、流式内容和通知。
+
+```mermaid
+flowchart TD
+    ChatHandler["chat_web_search_handler"]
+    ToolHandler["chat_completion_tools_handler"]
+    ImageHandler["chat_image_generation_handler"]
+    EventEmitter["event_emitter (异步函数)"]
+    SocketIO["Socket.IO 服务器 (socket_app)"]
+    Frontend["SvelteKit 前端事件监听器"]
+
+    ChatHandler --> EventEmitter
+    ToolHandler --> EventEmitter
+    ImageHandler --> EventEmitter
+    EventEmitter --> SocketIO
+    SocketIO --> Frontend
 ```
-{
-  "tts": {
-    "OPENAI_API_BASE_URL": "...",
-    "OPENAI_API_KEY": "...",
-    "ENGINE": "openai",
-    "MODEL": "tts-1",
-    "VOICE": "alloy",
-    "SPLIT_ON": "sentence",
-    ...
-  },
-  "stt": {
-    "OPENAI_API_BASE_URL": "...",
-    "ENGINE": "whisper",
-    "MODEL": "whisper-1",
-    "WHISPER_MODEL": "base",
-    ...
-  }
+事件发射器通过 `extra_params` 字典（键名为 `__event_emitter__`）传递给中间件流水线。
+
+**来源：** [backend/open\_webui/utils/middleware.py333-334](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/middleware.py#L333-L334) [backend/open\_webui/utils/middleware.py439-458](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/middleware.py#L439-L458)
+
+### 事件调用者 (Server ↔ Client)
+
+**事件调用者 (Event Caller)** 从后端向客户端发送同步请求并等待响应。用于工具执行、用户确认和交互式功能。
+
+```mermaid
+flowchart TD
+    ToolCallHandler["chat_completion_tools_handler tool_call_handler()"]
+    CheckDirect["tool.get('direct') == True?"]
+    DirectCall["await event_caller({'type': 'execute:tool', 'data': {...}})"]
+    CallableCall["await tool_function(**params)"]
+    EventCaller["event_call (异步函数)"]
+    ClientTool["客户端工具执行处理程序"]
+
+    ToolCallHandler --> CheckDirect
+    CheckDirect --> DirectCall
+    CheckDirect --> CallableCall
+    DirectCall --> EventCaller
+    EventCaller --> ClientTool
+    ClientTool --> EventCaller
+```
+事件调用者使后端能够将执行任务委托给前端功能，例如访问剪贴板、本地存储或浏览器 API。
+
+**来源：** [backend/open\_webui/utils/middleware.py377-422](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/middleware.py#L377-L422)
+
+## 事件类型与负载
+
+该系统使用具有标准结构的类型化事件消息。以下是整个中间件流水线中使用的主要事件类型：
+
+| 事件类型 | 方向 | 用途 | 负载结构 |
+| --- | --- | --- | --- |
+| `status` | Server → Client | 操作状态更新 | `{type: "status", data: {action, description, done, error?}}` |
+| `files` | Server → Client | 文件/图像传输 | `{type: "files", data: {files: [{type, url}]}}` |
+| `embeds` | Server → Client | UI 组件嵌入 | `{type: "embeds", data: {embeds: [html_content]}}` |
+| `execute:tool` | Server ↔ Client | 直接工具执行 | `{type: "execute:tool", data: {id, name, params, server, session_id}}` |
+| `citations` | Server → Client | 来源引用 | `{type: "citations", data: {citations: [...]}}` |
+
+### 状态事件示例
+
+> **[Mermaid stateDiagram]**
+> *(图表结构无法解析)*
+
+状态事件遵循一致的模式：初始事件带有 `done=false`，随后是带有 `done=true` 的完成事件，失败时可选配 `error=true`。
+
+**来源：** [backend/open\_webui/utils/middleware.py559-713](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/middleware.py#L559-L713) [backend/open\_webui/utils/middleware.py769-851](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/middleware.py#L769-L851)
+
+## 用于分布式部署的 Redis 集成
+
+对于多实例部署，Redis 提供了一个消息代理，用于在服务器之间分发 WebSocket 事件。这确保了连接到不同后端实例的用户能够正确接收事件。
+
+```mermaid
+flowchart TD
+    App1["FastAPI 应用"]
+    Socket1["Socket.IO 服务器"]
+    Redis1["Redis 客户端"]
+    App2["FastAPI 应用"]
+    Socket2["Socket.IO 服务器"]
+    Redis2["Redis 客户端"]
+    RedisServer["Redis 服务器 发布/订阅 + 存储"]
+    LoadBalancer["负载均衡器"]
+    Client1["用户 A 浏览器"]
+    Client2["用户 B 浏览器"]
+
+    App1 --> Socket1
+    Socket1 --> Redis1
+    App2 --> Socket2
+    Socket2 --> Redis2
+    Redis1 --> RedisServer
+    Redis2 --> RedisServer
+    Client1 --> LoadBalancer
+    Client2 --> LoadBalancer
+    LoadBalancer --> Socket1
+    LoadBalancer --> Socket2
+```
+Redis 配置在应用生命周期期间使用 `get_redis_connection()` 建立，支持：
+
+-   **标准 Redis**：单服务器实例。
+-   **Redis Sentinel**：具有自动故障转移功能的高可用性。
+-   **Redis Cluster**：分布式分片部署。
+
+**来源：** [backend/open\_webui/main.py586-593](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/main.py#L586-L593) [backend/open\_webui/config.py224-283](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/config.py#L224-L283)
+
+### Redis 连接初始化
+
+Redis 连接设置发生在应用生命周期上下文管理器中：
+
+```python
+# 基于 main.py:586-593 的伪代码
+app.state.redis = get_redis_connection(
+    redis_url=REDIS_URL,
+    redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT),
+    redis_cluster=REDIS_CLUSTER,
+    async_mode=True,
+)
+
+if app.state.redis is not None:
+    app.state.redis_task_command_listener = asyncio.create_task(
+        redis_task_command_listener(app)
+    )
+```
+`redis_task_command_listener` 是一个后台任务，用于监视 Redis 中的任务控制命令，从而实现跨实例的分布式任务管理。
+
+**来源：** [backend/open\_webui/main.py586-598](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/main.py#L586-L598) [backend/open\_webui/main.py629-631](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/main.py#L629-L631)
+
+## 通过 Redis 进行配置管理
+
+启用 Redis 后，配置更改将使用 Redis 作为分布式缓存，在所有后端实例之间同步：
+
+```mermaid
+flowchart TD
+    SetAttr["setattr (配置更新)"]
+    GetAttr["getattr (配置读取)"]
+    DBWrite["save_to_db() PostgreSQL/SQLite"]
+    RedisWrite["redis.set() (config:key, value)"]
+    RedisRead["redis.get() (config:key)"]
+    InMemory["_state[key].value (内存缓存)"]
+
+    SetAttr --> DBWrite
+    SetAttr --> RedisWrite
+    SetAttr --> InMemory
+    GetAttr --> RedisRead
+    RedisRead --> InMemory
+    InMemory --> GetAttr
+```
+`AppConfig` 类实现了一个双层缓存系统：数据库作为主要存储，Redis 作为快速失效缓存，用于同步各实例间的配置。
+
+**来源：** [backend/open\_webui/config.py224-283](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/config.py#L224-L283)
+
+## 会话与房间管理
+
+WebSocket 连接通过以下方式组织：
+
+### 会话识别
+
+每个聊天会话都会获得一个唯一的 `session_id`，该 ID 通过事件元数据传递。此标识符用于：
+
+-   将事件路由到特定的客户端连接。
+-   管理工具执行上下文。
+-   追踪文件上传及关联。
+
+```python
+# 来自 middleware.py 工具执行上下文
+metadata = {
+    "chat_id": metadata.get("chat_id", None),
+    "message_id": metadata.get("message_id", None),
+    "session_id": metadata.get("session_id", None),
 }
 ```
-`POST /api/audio/config/update` 端点用于更新配置，并在需要时重新初始化 Whisper 模型。
+**来源：** [backend/open\_webui/utils/middleware.py250-256](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/middleware.py#L250-L256) [backend/open\_webui/utils/middleware.py410-417](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/middleware.py#L410-L417)
 
-**来源：** [backend/open\_webui/routers/audio.py192-311](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L192-L311)
+### 基于房间的广播
 
----
+事件可以针对：
 
-## 文本转语音 (TTS) 系统
+-   **特定会话**：单个用户的活跃聊天会话。
+-   **用户房间**：特定用户的所有会话。
+-   **全局广播**：所有已连接的客户端（管理员功能）。
 
-TTS 系统使用可配置的后端引擎将文本转换为语音音频文件，并集成了缓存层以避免重复生成。
+`MODELS` 字典追踪各会话中的活跃模型使用情况，以便进行资源管理和清理。
 
-### 支持的引擎
+**来源：** [backend/open\_webui/main.py64](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/main.py#L64-L64)
 
-| 引擎 | 配置值 | 要求 | 模型 |
-| --- | --- | --- | --- |
-| OpenAI | `TTS_ENGINE="openai"` | `TTS_OPENAI_API_BASE_URL`, `TTS_OPENAI_API_KEY` | `tts-1`, `tts-1-hd` |
-| ElevenLabs | `TTS_ENGINE="elevenlabs"` | `TTS_API_KEY`, `ELEVENLABS_API_BASE_URL` | `eleven_monolingual_v1`, `eleven_multilingual_v2` |
-| Azure Speech | `TTS_ENGINE="azure"` | `TTS_AZURE_SPEECH_REGION`, `TTS_AZURE_SPEECH_OUTPUT_FORMAT` | 各种神经语音 |
-| Transformers | `TTS_ENGINE="transformers"` | 本地模型, 扬声器嵌入数据集 | `microsoft/speecht5_tts` |
+## 聊天流水线中的事件流
 
-**来源：** [backend/open\_webui/routers/audio.py329-600](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L329-L600)
-
-### 请求处理流程
+下图展示了 WebSocket 事件如何与聊天处理中间件集成：
 
 > **[Mermaid sequence]**
 > *(图表结构无法解析)*
 
-缓存机制对请求体以及引擎/模型标识符进行 SHA256 哈希处理，以生成唯一的缓存键。音频文件和原始请求 JSON 都会被存储。
+事件在流水线的关键阶段发射：在昂贵的操作（网页搜索、图像生成）之前、工具执行期间、传输文件/嵌入项时以及流式响应期间。
 
-**来源：** [backend/open\_webui/routers/audio.py329-600](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L329-L600)
+**来源：** [backend/open\_webui/utils/middleware.py555-714](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/middleware.py#L555-L714) [backend/open\_webui/utils/middleware.py755-851](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/middleware.py#L755-L851)
 
-### OpenAI TTS 实现
+## 定期清理任务
 
-对于 OpenAI 引擎，系统会：
+WebSocket 系统包含后台维护任务：
 
-1.  将 `payload["model"]` 设置为 `request.app.state.config.TTS_MODEL`
-2.  合并 `TTS_OPENAI_PARAMS` 以获取额外参数
-3.  向 `{TTS_OPENAI_API_BASE_URL}/audio/speech` 发起异步 POST 请求
-4.  如果 `ENABLE_FORWARD_USER_INFO_HEADERS` 为 true，则包含用户信息标头
-5.  将响应保存到缓存目录并返回 `FileResponse`
+### 使用池清理
 
-**来源：** [backend/open\_webui/routers/audio.py353-410](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L353-L410)
+`periodic_usage_pool_cleanup()` 持续运行以管理 `MODELS` 字典，该字典追踪活跃的模型使用情况。这可以防止由于遗弃会话导致的内存泄漏，并为资源监控提供指标。
 
-### ElevenLabs TTS 实现
+```python
+# 来自 main.py:604
+asyncio.create_task(periodic_usage_pool_cleanup())
+```
+此任务在应用启动时创建，并在应用的整个生命周期内运行。
 
-对于 ElevenLabs 引擎：
+**来源：** [backend/open\_webui/main.py604](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/main.py#L604-L604)
 
-1.  从载荷中提取 `voice_id`，并对照 `get_available_voices()` 进行验证
-2.  向 `{ELEVENLABS_API_BASE_URL}/v1/text-to-speech/{voice_id}` 发送 POST 请求
-3.  使用 `TTS_MODEL`（例如 `eleven_monolingual_v1`）以及默认语音设置
-4.  返回缓存的音频文件
+### Redis 任务命令监听器
 
-**来源：** [backend/open\_webui/routers/audio.py412-461](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L412-L461)
+当 Redis 可用时，会有一个专门的任务监听 Redis 发布/订阅频道，以接收分布式任务命令：
 
-### Azure Speech TTS 实现
+```python
+# 来自 main.py:595-598
+if app.state.redis is not None:
+    app.state.redis_task_command_listener = asyncio.create_task(
+        redis_task_command_listener(app)
+    )
+```
+此监听器在应用关闭期间被取消，以确保干净的终止。
 
-Azure Speech 使用具有 SSML 格式的 Speech SDK：
+**来源：** [backend/open\_webui/main.py595-598](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/main.py#L595-L598) [backend/open\_webui/main.py629-631](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/main.py#L629-L631)
 
-1.  使用配置的语音和语言构建 SSML XML
-2.  使用 `TTS_AZURE_SPEECH_OUTPUT_FORMAT`（默认：`audio-24khz-48kbitrate-mono-mp3`）
-3.  支持通过 `TTS_SPLIT_ON` 在句子或段落边界进行文本拆分
-4.  使用 `ThreadPoolExecutor` 并行处理各个分块以进行合成
-5.  使用 `pydub.AudioSegment` 拼接音频片段
+## 工具结果处理
 
-**来源：** [backend/open\_webui/routers/audio.py462-550](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L462-L550)
-
-### Transformers (本地) TTS 实现
-
-本地 Transformers 管道：
-
-1.  在首次使用时通过 `load_speech_pipeline()` 延迟加载管道
-2.  使用来自 HuggingFace 的 `microsoft/speecht5_tts` 模型
-3.  从 `Matthijs/cmu-arctic-xvectors` 数据集加载扬声器嵌入
-4.  使用 `pipeline(text, forward_params={"speaker_embeddings": ...})` 生成音频
-5.  使用 `scipy` 和 `pydub` 导出为 MP3 格式
-
-**来源：** [backend/open\_webui/routers/audio.py314-327](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L314-L327) [backend/open\_webui/routers/audio.py551-600](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L551-L600)
-
-### 语音管理
-
-`/api/audio/voices` 端点根据配置的引擎返回可用的语音：
+工具执行结果可能包含触发 WebSocket 事件的特殊响应类型：
 
 ```mermaid
 flowchart TD
-    VoicesEndpoint["/api/audio/voices"]
-    CheckEngine["根据 TTS_ENGINE 判断"]
-    OpenAIVoices["返回 OpenAI 语音: alloy, echo, fable, onyx, nova, shimmer"]
-    ElevenLabsAPI["从 ElevenLabs /v1/voices 端点获取"]
-    AzureAPI["从 Azure /voices/list 端点获取"]
-    LocalVoices["从嵌入数据集中返回扬声器 ID"]
+    ToolResult["工具执行结果"]
+    CheckType["结果类型"]
+    HTMLResponse["HTML 响应 (内联内容)"]
+    TupleResponse["元组 (结果, 请求头)"]
+    ListResponse["列表 (MCP 协议)"]
+    StringResponse["字符串/字典"]
+    ProcessEmbed["检查 Content-Disposition"]
+    ExtractEmbed["是否内联?"]
+    EmitEmbed["发射 (embeds, [内容])"]
+    ReturnPlain["以文本形式返回"]
+    ParseMCP["解析 MCP 协议"]
+    ExtractFiles["提取图像/音频"]
+    EmitFiles["发射 (files, [URL])"]
+    FormatJSON["格式化为 JSON"]
 
-    VoicesEndpoint --> CheckEngine
-    CheckEngine --> OpenAIVoices
-    CheckEngine --> ElevenLabsAPI
-    CheckEngine --> AzureAPI
-    CheckEngine --> LocalVoices
+    ToolResult --> CheckType
+    CheckType --> HTMLResponse
+    CheckType --> TupleResponse
+    CheckType --> ListResponse
+    CheckType --> StringResponse
+    HTMLResponse --> ProcessEmbed
+    TupleResponse --> ProcessEmbed
+    ProcessEmbed --> ExtractEmbed
+    ExtractEmbed --> EmitEmbed
+    ExtractEmbed --> ReturnPlain
+    ListResponse --> ParseMCP
+    ParseMCP --> ExtractFiles
+    ExtractFiles --> EmitFiles
+    StringResponse --> FormatJSON
 ```
-**来源：** [backend/open\_webui/routers/audio.py602-700](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L602-L700)
+`process_tool_result()` 函数负责处理这些转换，提取可嵌入内容（HTML iframe）和文件附件（图像、音频），并作为独立的 WebSocket 事件发射。
 
----
+**来源：** [backend/open\_webui/utils/middleware.py143-283](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/middleware.py#L143-L283)
 
-## 语音转文本 (STT) 系统
+## 与中间件流水线的集成
 
-STT 系统使用多个后端引擎将音频文件转录为文本，并具备格式转换的预处理功能以及针对大文件的可选分块功能。
+WebSocket 事件处理程序作为 `extra_params` 字典的一部分在中间件流水线中传递：
 
-### 支持的引擎
-
-| 引擎 | 配置值 | 要求 | 特性 |
-| --- | --- | --- | --- |
-| Faster Whisper | `STT_ENGINE=""` (默认) | `WHISPER_MODEL` (例如 `base`, `medium`, `large-v3`) | 本地推理、CUDA 支持、语言检测 |
-| OpenAI Whisper | `STT_ENGINE="openai"` | `STT_OPENAI_API_BASE_URL`, `STT_OPENAI_API_KEY` | 云端 API、提示词支持 |
-| Azure Speech | `STT_ENGINE="azure"` | `AUDIO_STT_AZURE_API_KEY`, `AUDIO_STT_AZURE_REGION` | 说话人日志 (Speaker diarization)、多语言支持 |
-| Deepgram | `STT_ENGINE="deepgram"` | `DEEPGRAM_API_KEY` | 实时流式传输支持 |
-| Mistral | `STT_ENGINE="mistral"` | `AUDIO_STT_MISTRAL_API_KEY` | 聊天完成或音频/转录端点 |
-
-**来源：** [backend/open\_webui/routers/audio.py701-900](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L701-L900)
-
-### 请求处理流程
-
-> **[Mermaid sequence]**
-> *(图表结构无法解析)*
-
-**来源：** [backend/open\_webui/routers/audio.py701-900](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L701-L900)
-
-### 音频格式转换
-
-系统对音频文件进行验证和转换以确保兼容性：
-
-```mermaid
-flowchart TD
-    CheckFormat["is_audio_conversion_required(file_path)"]
-    GetMediaInfo["pydub.mediainfo()"]
-    CheckCodec["codec_name 是否在 SUPPORTED_FORMATS 中？"]
-    CheckAAC["codec_name == 'aac' 且 codec_tag == 'mp4a'？"]
-    NoConversion["返回 False (无需转换)"]
-    NeedsConversion["返回 True (AAC 需要转换)"]
-
-    CheckFormat --> GetMediaInfo
-    GetMediaInfo --> CheckCodec
-    GetMediaInfo --> CheckAAC
-    CheckCodec --> NoConversion
-    CheckCodec --> NeedsConversion
-    CheckAAC --> NeedsConversion
-    CheckAAC --> CheckCodec
-```
-`convert_audio_to_mp3()` 函数使用 `pydub.AudioSegment` 转码为 MP3 格式。
-
-**来源：** [backend/open\_webui/routers/audio.py81-122](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L81-L122)
-
-### 文件大小限制
-
-| 引擎 | 最大大小 | 常量 |
+| 键名 | 类型 | 用途 |
 | --- | --- | --- |
-| 默认 | 20 MB | `MAX_FILE_SIZE` |
-| Azure | 200 MB | `AZURE_MAX_FILE_SIZE` |
+| `__event_emitter__` | `异步可调用对象` | 向客户端发送事件 (无响应) |
+| `__event_call__` | `异步可调用对象` | 与客户端进行请求/响应交互 |
+| `__metadata__` | `字典` | 会话上下文 (chat\_id, message\_id, session\_id) |
 
-**来源：** [backend/open\_webui/routers/audio.py60-63](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L60-L63)
+这些在聊天补全处理程序的入口点被注入，并贯穿所有的中间件函数：
 
-### Faster Whisper (本地) 实现
+```python
+# 贯穿 middleware.py 的伪代码模式
+async def chat_web_search_handler(request, form_data, extra_params, user):
+    event_emitter = extra_params["__event_emitter__"]
 
-本地 Whisper 实现使用 `faster-whisper` 以实现高效的 CPU/GPU 推理：
+    await event_emitter({
+        "type": "status",
+        "data": {"action": "web_search", "done": False}
+    })
 
-1.  通过 `set_faster_whisper_model()` 初始化模型：
-    -   如果 `WHISPER_MODEL_DIR` 中不存在模型，则下载该模型
-    -   如果 `DEVICE_TYPE == "cuda"` 则使用 CUDA，否则使用 CPU
-    -   支持使用 `compute_type="int8"` 进行量化
-2.  大文件分块：
-    -   对于超过 20MB 的文件，使用 `split_on_silence()` 检测静音
-    -   使用 `ThreadPoolExecutor` 分别处理各个分块
-    -   拼接转录结果
-3.  转录参数：
-    -   `language`：自动检测或使用 `WHISPER_LANGUAGE`
-    -   `initial_prompt`：可选上下文以提高准确性
-    -   如果请求，则返回带有时间戳的片段
+    # ... 执行操作 ...
 
-**来源：** [backend/open\_webui/routers/audio.py124-146](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L124-L146) [backend/open\_webui/routers/audio.py701-780](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L701-L780)
-
-### OpenAI Whisper API 实现
-
-对于 OpenAI Whisper 引擎：
-
-1.  向 `{STT_OPENAI_API_BASE_URL}/audio/transcriptions` 发送 multipart/form-data POST 请求
-2.  包含文件、模型、语言和提示词参数
-3.  根据请求设置 `response_format`（默认：`json`）
-4.  解析响应并返回文本
-
-**来源：** [backend/open\_webui/routers/audio.py781-820](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L781-L820)
-
-### Azure Speech Services 实现
-
-Azure Speech 支持高级特性：
-
-1.  **说话人日志 (Speaker Diarization)**：当 `AUDIO_STT_AZURE_MAX_SPEAKERS` > 1 时
-    -   使用 `/speechtotext/transcriptions:transcribe` 端点
-    -   返回带有说话人标签的转录内容
-    -   格式化输出并带有时间戳
-2.  **多语言支持**：支持 `AUDIO_STT_AZURE_LOCALES` 中的逗号分隔语言列表
-3.  **身份验证**：在 `Ocp-Apim-Subscription-Key` 标头中使用 `AUDIO_STT_AZURE_API_KEY`
-
-**来源：** [backend/open\_webui/routers/audio.py821-857](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L821-L857)
-
-### Deepgram 实现
-
-Deepgram 转录流程：
-
-1.  向 `https://api.deepgram.com/v1/listen` 发送音频文件 POST 请求
-2.  使用查询参数：`model`, `language`, `detect_language=true`
-3.  解析嵌套响应：`response["results"]["channels"][0]["alternatives"][0]["transcript"]`
-
-**来源：** [backend/open\_webui/routers/audio.py858-880](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L858-L880)
-
-### Mistral Audio 实现
-
-Mistral 通过 `AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS` 支持两种模式：
-
-1.  **聊天完成模式**：
-    -   向 `/v1/chat/completions` 发送 POST 请求，图像内容类型为 `audio_url`
-    -   从聊天响应中提取文本
-2.  **音频转录模式**：
-    -   向 `/v1/audio/transcriptions` 端点发送 POST 请求
-    -   标准的转录响应格式
-
-**来源：** [backend/open\_webui/routers/audio.py881-900](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L881-L900)
-
----
-
-## API 端点参考
-
-| 端点 | 方法 | 权限 | 用途 |
-| --- | --- | --- | --- |
-| `/api/audio/config` | GET | 管理员 | 检索 TTS/STT 配置 |
-| `/api/audio/config/update` | POST | 管理员 | 更新 TTS/STT 配置 |
-| `/api/audio/speech` | POST | 用户 | 将文本生成为语音 (TTS) |
-| `/api/audio/transcriptions` | POST | 用户 | 将音频转录为文本 (STT) |
-| `/api/audio/voices` | GET | 用户 | 列出当前 TTS 引擎的可用语音 |
-
-**来源：** [backend/open\_webui/routers/audio.py57-900](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L57-L900)
-
-### 请求/响应示例
-
-**TTS 请求：**
-
+    await event_emitter({
+        "type": "status",
+        "data": {"action": "web_search", "done": True}
+    })
 ```
-{
-  "model": "tts-1",
-  "input": "Hello, this is a test.",
-  "voice": "alloy"
-}
-```
-**TTS 响应：** 二进制音频文件 (MP3 格式)
-
-**STT 请求：** 包含以下内容的 Multipart form-data：
-
--   `file`: 音频文件 (mp3, wav, m4a 等)
--   `model`: 可选的模型标识符
--   `language`: 可选的语言代码
--   `prompt`: 可选的上下文以提高准确性
-
-**STT 响应：**
-
-```
-{
-  "text": "Hello, this is a test."
-}
-```
-**来源：** [backend/open\_webui/routers/audio.py329-900](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L329-L900)
-
----
-
-## 缓存策略
-
-TTS 响应被积极缓存，以降低 API 成本并缩短响应时间。
-
-### 缓存键生成
-
-```
-# 缓存键 = SHA256(request_body + TTS_ENGINE + TTS_MODEL)
-name = hashlib.sha256(
-    body
-    + str(request.app.state.config.TTS_ENGINE).encode("utf-8")
-    + str(request.app.state.config.TTS_MODEL).encode("utf-8")
-).hexdigest()
-
-file_path = SPEECH_CACHE_DIR / f"{name}.mp3"
-file_body_path = SPEECH_CACHE_DIR / f"{name}.json"
-```
-缓存存储以下内容：
-
-1.  **音频文件**：`{hash}.mp3` - 生成的音频
-2.  **请求元数据**：`{hash}.json` - 原始请求参数
-
-这确保了相同的请求会返回缓存的响应，而无需调用外部 API。
-
-**来源：** [backend/open\_webui/routers/audio.py67-68](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L67-L68) [backend/open\_webui/routers/audio.py332-343](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L332-L343)
-
----
-
-## 与聊天系统的集成
-
-音频处理通过以下方式与主聊天界面集成：
-
-1.  **消息播放**：使用消息内容调用 TTS 端点
-2.  **语音输入**：STT 端点处理录制的音频，将文本插入到消息输入框中
-3.  **用户标头**：`ENABLE_FORWARD_USER_INFO_HEADERS` 将用户上下文传播到外部 API
-4.  **元数据**：标头中包含聊天 ID，以便进行追踪和审计
-
-**来源：** [backend/open\_webui/routers/audio.py370-371](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/routers/audio.py#L370-L371) [backend/open\_webui/env.py52-54](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/env.py#L52-L54)
-
----
+**来源：** [backend/open\_webui/utils/middleware.py332-334](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/middleware.py#L332-L334) [backend/open\_webui/utils/middleware.py555-625](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/utils/middleware.py#L555-L625)
 
 ## 环境配置
 
-音频处理的关键环境变量：
+WebSocket 支持由环境变量控制：
 
-### 文本转语音 (TTS)
+| 变量名 | 默认值 | 用途 |
+| --- | --- | --- |
+| `ENABLE_WEBSOCKET_SUPPORT` | \- | 启用/禁用 WebSocket 功能 |
+| `REDIS_URL` | \- | 分布式模式下的 Redis 连接 URL |
+| `REDIS_CLUSTER` | `False` | 使用 Redis 集群而非单机模式 |
+| `REDIS_SENTINEL_HOSTS` | \- | 以逗号分隔的哨兵 (Sentinel) 主机列表 |
+| `REDIS_SENTINEL_PORT` | \- | 哨兵端口号 |
+| `REDIS_KEY_PREFIX` | `open-webui` | 所有 Redis 键的前缀 |
 
--   `TTS_ENGINE`：引擎选择 (openai, elevenlabs, azure, transformers)
--   `TTS_OPENAI_API_BASE_URL`, `TTS_OPENAI_API_KEY`：OpenAI 配置
--   `TTS_API_KEY`：ElevenLabs API 密钥
--   `TTS_MODEL`：当前引擎的模型标识符
--   `TTS_VOICE`：语音标识符
--   `TTS_SPLIT_ON`：文本拆分策略 (sentence, paragraph)
--   `TTS_AZURE_SPEECH_REGION`, `TTS_AZURE_SPEECH_OUTPUT_FORMAT`：Azure 配置
+当未配置 `REDIS_URL` 时，WebSocket 事件仅在单个服务器实例内分发。
 
-### 语音转文本 (STT)
-
--   `STT_ENGINE`：引擎选择（本地 Whisper 留空, openai, azure, deepgram, mistral）
--   `STT_OPENAI_API_BASE_URL`, `STT_OPENAI_API_KEY`：OpenAI 配置
--   `WHISPER_MODEL`：本地 Whisper 模型大小 (base, medium, large-v3)
--   `WHISPER_MODEL_DIR`：下载的 Whisper 模型的目录
--   `WHISPER_MODEL_AUTO_UPDATE`：自动下载最新的模型版本
--   `WHISPER_LANGUAGE`：转录的默认语言
--   `DEEPGRAM_API_KEY`：Deepgram API 密钥
--   `AUDIO_STT_AZURE_API_KEY`, `AUDIO_STT_AZURE_REGION`：Azure 配置
--   `AUDIO_STT_MISTRAL_API_KEY`, `AUDIO_STT_MISTRAL_API_BASE_URL`：Mistral 配置
-
-### 系统 (System)
-
--   `CACHE_DIR`：基础缓存目录（包含 `audio/speech` 子目录）
--   `DEVICE_TYPE`：硬件加速 (cpu, cuda, mps)
--   `ENABLE_FORWARD_USER_INFO_HEADERS`：在 API 请求中包含用户上下文
-
-**来源：** [backend/open\_webui/env.py1-889](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/env.py#L1-L889) [backend/open\_webui/config.py40-45](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/config.py#L40-L45)
+**来源：** [backend/open\_webui/env.py447-451](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/env.py#L447-L451) [backend/open\_webui/config.py224-236](https://github.com/open-webui/open-webui/blob/a7271532/backend/open_webui/config.py#L224-L236)

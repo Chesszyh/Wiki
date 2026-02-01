@@ -1,4 +1,4 @@
-# 消息内容渲染
+# 消息内容渲染 (Message Content Rendering)
 
 相关源文件
 
@@ -19,41 +19,41 @@
 -   [src/lib/utils/index.ts](https://github.com/open-webui/open-webui/blob/a7271532/src/lib/utils/index.ts)
 -   [src/lib/utils/marked/strikethrough-extension.ts](https://github.com/open-webui/open-webui/blob/a7271532/src/lib/utils/marked/strikethrough-extension.ts)
 -   [src/lib/workers/pyodide.worker.ts](https://github.com/open-webui/open-webui/blob/a7271532/src/lib/workers/pyodide.worker.ts)
--   [src/routes/(app)/+layout.svelte](https://github.com/open-webui/open-webui/blob/a7271532/src/routes/(app)/+layout.svelte)
--   [src/routes/(app)/+page.svelte](https://github.com/open-webui/open-webui/blob/a7271532/src/routes/(app)/+page.svelte)
+-   [src/routes/(app)/+layout.svelte](https://github.com/open-webui/open-webui/blob/a7271532/src/routes/(app)/+layout.svelte)/+layout.svelte)
+-   [src/routes/(app)/+page.svelte](https://github.com/open-webui/open-webui/blob/a7271532/src/routes/(app)/+page.svelte)/+page.svelte)
 -   [src/routes/(app)/c/ˈidˈ/+page.svelte](src/routes/(app)/c/%5Bid%5D/+page.svelte)
 
-## 目的和范围
+## 目的与范围
 
-本文档描述了富内容渲染系统，该系统将带有嵌入代码、图表和数学公式的 Markdown 文本转换为完全渲染的交互式 HTML。渲染管道处理以下内容：
+本文档描述了富内容渲染系统，该系统将带有嵌入代码、图表和数学公式的 Markdown 文本转换为渲染完整且具有交互性的 HTML。渲染流水线处理：
 
 -   带有自定义扩展（KaTeX 数学公式、引用、脚注）的 Markdown 解析
--   代码块语法高亮和执行（通过 Jupyter 或浏览器内的 Python）
+-   代码块语法高亮与执行（通过 Jupyter 或浏览器内 Python）
 -   图表渲染（Mermaid, Vega/Vega-Lite）
--   带有 CSV 导出功能的表格渲染
--   针对所选文本的上下文操作（提问、解释）
+-   带有 CSV 导出的表格渲染
+-   针对选定文本的上下文操作（提问、解释）
 
-有关消息如何在聊天界面中显示和组织的详细信息，请参阅[响应消息渲染](/open-webui/open-webui/3.4-reverse-proxy-setup)。有关编排消息流的聊天组件，请参阅[聊天组件架构](/open-webui/open-webui/3.1-installation-methods)。
+有关消息如何在聊天界面中显示和组织的信息，请参阅 [响应消息渲染](/open-webui/open-webui/3.4-reverse-proxy-setup)。有关编排消息流的聊天组件，请参阅 [聊天组件架构](/open-webui/open-webui/3.1-installation-methods)。
 
 ---
 
 ## 架构概览
 
-消息内容渲染系统遵循从原始 Markdown 文本到完全渲染的交互式内容的多阶段管道：
+消息内容渲染系统遵循一个多阶段流水线，从原始 Markdown 文本转换为完全渲染的交互式内容：
 
-### 内容渲染管道
+### 内容渲染流水线
 
 ```mermaid
 flowchart TD
     Content["原始内容字符串"]
     ContentRenderer["ContentRenderer.svelte (编排器)"]
     Markdown["Markdown.svelte (解析器设置)"]
-    MarkedLexer["marked.lexer() (词法分析/分词)"]
-    MarkdownTokens["MarkdownTokens.svelte (Token 渲染器)"]
+    MarkedLexer["marked.lexer() (分词)"]
+    MarkdownTokens["MarkdownTokens.svelte (令牌渲染器)"]
     CodeBlock["CodeBlock.svelte"]
     Table["表格渲染器"]
     List["列表渲染器"]
-    Blockquote["块引用/警告"]
+    Blockquote["引用/警示 (Blockquote/Alert)"]
     Paragraph["段落渲染器"]
     PythonExec["Python 执行"]
     MermaidRender["Mermaid 渲染"]
@@ -82,21 +82,21 @@ flowchart TD
 
 ### ContentRenderer 组件
 
-`ContentRenderer.svelte` 作为内容渲染的顶级编排器。它包装了 Markdown 组件，并管理用于上下文操作的悬浮按钮定位。
+`ContentRenderer.svelte` 充当内容渲染的顶层编排器。它包装了 Markdown 组件，并管理用于上下文操作的悬浮按钮位置。
 
-**主要职责：**
+**关键职责：**
 
 -   管理 Markdown 渲染生命周期
--   根据选中的文本定位 `FloatingButtons`
--   检测 Artifacts（HTML/SVG 代码）并触发 Artifact 面板显示
--   处理用于选区跟踪的鼠标事件
+-   根据文本选区定位 `FloatingButtons`
+-   检测 artifacts (HTML/SVG 代码) 并触发 artifact 面板显示
+-   处理鼠标事件以跟踪选区
 
-**Props：**
+**属性 (Props)：**
 
-| Prop | 类型 | 描述 | 
+| 属性名 | 类型 | 描述 |
 | --- | --- | --- |
 | `content` | string | 要渲染的原始 Markdown 内容 |
-| `history` | object | 用于上下文的消息历史记录 |
+| `history` | object | 用于提供上下文的消息历史 |
 | `messageId` | string | 当前消息的 ID |
 | `done` | boolean | 流式传输是否已完成 |
 | `sources` | array | 带有引用的 RAG 来源 |
@@ -110,7 +110,7 @@ flowchart TD
 
 ### Markdown 组件
 
-`Markdown.svelte` 使用自定义扩展配置 `marked.js` 解析器并启动分词。
+`Markdown.svelte` 使用自定义扩展配置 `marked.js` 解析器，并启动分词 (tokenization) 过程。
 
 **扩展配置：**
 
@@ -120,9 +120,9 @@ flowchart TD
     KaTeX["markedKatexExtension (数学公式渲染)"]
     Citation["citationExtension (来源引用)"]
     Footnote["footnoteExtension (脚注)"]
-    Strikethrough["disableSingleTilde (仅限 ~~) "]
+    Strikethrough["disableSingleTilde (仅限 ~~"]
     Mention["mentionExtension (@ 和 # 标签)"]
-    Custom["markedExtension (Details 块)"]
+    Custom["markedExtension (详情块)"]
 
     Marked --> KaTeX
     Marked --> Citation
@@ -133,7 +133,7 @@ flowchart TD
 ```
 **扩展加载：**
 
-```
+```javascript
 // Markdown.svelte 中的第 43-50 行
 marked.use(markedKatexExtension(options));
 marked.use(markedExtension(options));
@@ -145,31 +145,31 @@ marked.use({
                  mentionExtension({ triggerChar: '#' })]
 });
 ```
-**Token 处理：** 组件使用 `marked.lexer()` 将 Markdown 转换为 Token 树，然后将这些 Token 传递给 `MarkdownTokens` 进行渲染。
+**令牌处理：** 该组件使用 `marked.lexer()` 将 Markdown 转换为令牌树，然后将这些令牌传递给 `MarkdownTokens` 进行渲染。
 
 **来源：** [src/lib/components/chat/Messages/Markdown.svelte1-79](https://github.com/open-webui/open-webui/blob/a7271532/src/lib/components/chat/Messages/Markdown.svelte#L1-L79) [src/lib/utils/marked/strikethrough-extension.ts1-30](https://github.com/open-webui/open-webui/blob/a7271532/src/lib/utils/marked/strikethrough-extension.ts#L1-L30)
 
 ---
 
-## Token 渲染系统
+## 令牌渲染系统
 
 ### MarkdownTokens 组件
 
-`MarkdownTokens.svelte` 递归地渲染由 `marked.lexer()` 生成的 Token 树。每种 Token 类型都有专门的渲染逻辑。
+`MarkdownTokens.svelte` 递归地渲染由 `marked.lexer()` 生成的令牌树。每种令牌类型都有专门的渲染逻辑。
 
-**Token 类型分发：**
+**令牌类型分发：**
 
 ```mermaid
 flowchart TD
-    TokenArray["Token 数组"]
-    Dispatcher["Token 类型分发器"]
+    TokenArray["令牌数组"]
+    Dispatcher["令牌类型分发器"]
     HR["type: 'hr' → <hr>"]
     Heading["type: 'heading' → <h1>-<h6>"]
     Code["type: 'code' → CodeBlock.svelte"]
     Table["type: 'table' → 表格渲染器"]
-    Blockquote["type: 'blockquote' → 警告/块引用"]
+    Blockquote["type: 'blockquote' → 警示/引用"]
     List["type: 'list' → <ol>/<ul>"]
-    Details["type: 'details' → 可折叠项"]
+    Details["type: 'details' → 可折叠块"]
     HTML["type: 'html' → HtmlToken"]
     IFrame["type: 'iframe' → <iframe>"]
     Paragraph["type: 'paragraph' → <p>"]
@@ -190,15 +190,15 @@ flowchart TD
     Dispatcher --> Text
     Dispatcher --> KaTeX
 ```
-**关键 Token 处理程序：**
+**关键令牌处理程序：**
 
-| Token 类型 | 处理程序 | 描述 |
+| 令牌类型 | 处理程序 | 描述 |
 | --- | --- | --- |
 | `code` | `CodeBlock.svelte` | 语法高亮、执行、图表 |
-| `table` | 表格渲染器 | 渲染带有 CSV 导出功能的表格 |
-| `blockquote` | 警告或块引用 | GitHub 风格的警告（NOTE, TIP 等） |
+| `table` | 表格渲染器 | 渲染带有 CSV 导出的表格 |
+| `blockquote` | 警示或引用 | GitHub 风格的警示 (NOTE, TIP 等) |
 | `list` | 列表渲染器 | 带有任务复选框的有序/无序列表 |
-| `details` | `Collapsible.svelte` | 可展开的详细信息块 |
+| `details` | `Collapsible.svelte` | 可展开的详情块 |
 | `inlineKatex`/`blockKatex` | `KatexRenderer.svelte` | 数学公式渲染 |
 
 **来源：** [src/lib/components/chat/Messages/Markdown/MarkdownTokens.svelte1-416](https://github.com/open-webui/open-webui/blob/a7271532/src/lib/components/chat/Messages/Markdown/MarkdownTokens.svelte#L1-L416)
@@ -207,17 +207,17 @@ flowchart TD
 
 ### 表格渲染与导出
 
-表格渲染具有交互功能：
+表格渲染具有交互式特性：
 
-**表格功能：**
+**表格特性：**
 
--   支持对齐的可排序列
+-   支持对齐方式的可排序列
 -   将表格复制为 Markdown
 -   导出为 CSV 格式
 
 **CSV 导出实现：**
 
-```
+```javascript
 // MarkdownTokens.svelte 中的第 53-87 行
 const exportTableToCSVHandler = (token, tokenIdx = 0) => {
     const header = token.header.map((headerCell) =>
