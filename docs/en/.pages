@@ -1,8 +1,28 @@
 nav:
   - index.md
+  - apps.apple.com_deepwiki
+  - autoresearch-wiki
   - celery_deepwiki
+  - cliproxyAPI
+  - codex-wiki
+  - dify_deepwiki
+  - gemini
+  - kubernetes-wiki
+  - langgraph-wiki
   - lc0_deepwiki
   - linux_deepwiki
+  - LlamaFactory-wiki
+  - n8n-wiki
+  - ollama-wiki
+  - open-webui_deepwiki
+  - openbb-wiki
+  - openclaw
+  - opencv-wiki
+  - pytorch
   - ragflow_deepwiki
+  - react_deepwiki
   - redis_deepwiki
   - stockfish_deepwiki
+  - transformers-wiki
+  - vllm-wiki
+  - x-algorithm-wiki
