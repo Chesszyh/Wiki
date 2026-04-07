@@ -7,7 +7,6 @@ nav:
   - dify_deepwiki
   - kubernetes-wiki
   - langgraph-wiki
-  - lc0_deepwiki
   - linux_deepwiki
   - LlamaFactory-wiki
   - n8n-wiki
@@ -20,7 +19,6 @@ nav:
   - ragflow_deepwiki
   - react_deepwiki
   - redis_deepwiki
-  - stockfish_deepwiki
   - transformers-wiki
   - vllm-wiki
   - x-algorithm-wiki
