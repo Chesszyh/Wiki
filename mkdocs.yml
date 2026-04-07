@@ -44,7 +44,8 @@ markdown_extensions:
       permalink: true
 
 plugins:
-  - search
+  - search:
+      indexing: 'titles'
   - awesome-pages
   - i18n:
       docs_structure: folder
