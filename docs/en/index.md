@@ -26,6 +26,7 @@ This project hosts multiple DeepWiki documentations.
 * [React DeepWiki](react_deepwiki/1-overview.md)
 * [Redis DeepWiki](redis_deepwiki/1-redis-overview.md)
 * [Transformers Wiki](transformers-wiki/1-overview.md)
+* [Upscayl DeepWiki](upscayl_deepwiki/1-overview.md)
 * [vLLM Wiki](vllm-wiki/1-overview.md)
 * [X-Algorithm Wiki](x-algorithm-wiki/1-overview.md)
 

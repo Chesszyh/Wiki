@@ -20,5 +20,6 @@ nav:
   - react_deepwiki
   - redis_deepwiki
   - transformers-wiki
+  - upscayl_deepwiki
   - vllm-wiki
   - x-algorithm-wiki
